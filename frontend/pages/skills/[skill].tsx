@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import Header from '@/components/Header'
 import JobCard from '@/components/JobCard'
 import { CodeBracketIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
-import { API_BASE_URL } from '@/utils/api'
+import { searchJobs } from '@/utils/api'
 
 interface Job {
   id: string
@@ -35,8 +35,7 @@ export default function SkillJobsPage() {
   const loadJobs = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/search/?q=${skill}`)
-      const data = await response.json()
+      const data = await searchJobs(Array.isArray(skill) ? skill[0] : skill || '')
       setJobs(data.jobs || [])
     } catch (error) {
       console.error('Failed to fetch jobs:', error)

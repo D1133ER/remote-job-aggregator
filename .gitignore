@@ -7,3 +7,6 @@ __pycache__/
 .venv/
 node_modules/
 .next/
+
+# TypeScript incremental build info
+*.tsbuildinfo

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Header from '@/components/Header'
 import JobCard from '@/components/JobCard'
 import { BookmarkIcon, TrashIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
-import { API_BASE_URL } from '@/utils/api'
+import { getSavedJobs, unsaveJob } from '@/utils/api'
 
 interface SavedJob {
   id: string
@@ -44,13 +44,7 @@ export default function SavedJobs() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/saved-jobs/`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-
-      if (!response.ok) throw new Error('Failed to load saved jobs')
-
-      const data = await response.json()
+      const data = await getSavedJobs()
       setSavedJobs(data)
     } catch (err) {
       setError('Failed to load saved jobs')
@@ -64,10 +58,7 @@ export default function SavedJobs() {
     if (!token) return
     setSavedJobs(savedJobs.filter(j => j.id !== savedJobId))
     try {
-      await fetch(`${API_BASE_URL}/saved-jobs/${savedJobId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
+      await unsaveJob(savedJobId)
     } catch (err) {
       console.error('Failed to remove saved job')
     }

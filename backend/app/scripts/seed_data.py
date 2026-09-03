@@ -1,7 +1,7 @@
 """Script to seed the database with sample job data for development"""
 import asyncio
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import sys
 import os
 
@@ -85,7 +85,7 @@ SAMPLE_JOBS = [
     {
         "title": "Customer Support Specialist",
         "company_name": "Zapier",
-        "description": "Help Zappier customers get the most out of our automation platform. You'll answer questions via chat and email, write documentation, and provide feedback to our product team. Excellent written communication skills required. Fully remote position with flexible hours.",
+        "description": "Help Zapier customers get the most out of our automation platform. You'll answer questions via chat and email, write documentation, and provide feedback to our product team. Excellent written communication skills required. Fully remote position with flexible hours.",
         "location": "Remote",
         "remote_type": "full_remote",
         "salary_min": 45000,
@@ -156,12 +156,10 @@ SAMPLE_JOBS = [
 
 
 async def seed_database():
-    """Seed the database with sample data"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     async with AsyncSessionLocal() as session:
-        # Seed companies
         for company_data in SAMPLE_COMPANIES:
             existing = await session.execute(
                 select(Company).where(Company.name == company_data["name"])
@@ -169,35 +167,33 @@ async def seed_database():
             if not existing.scalar_one_or_none():
                 company = Company(**company_data)
                 session.add(company)
-        
-        # Seed jobs
+
+        now = datetime.now(timezone.utc)
         for i, job_data in enumerate(SAMPLE_JOBS):
-            # Create unique source URLs
             job_data = dict(job_data)
             job_data["source_url"] = f"https://example.com/jobs/{i}"
             job_data["source_name"] = random.choice(["greenhouse", "remotive", "lever", "weworkremotely"])
             job_data["source_id"] = f"sample-{i}"
-            job_data["posted_at"] = datetime.utcnow() - timedelta(days=i % 10)
-            
+            job_data["posted_at"] = now - timedelta(days=i % 10)
+
             job = Job(**job_data)
             session.add(job)
-        
-        # Seed a demo user
+
         demo_user = User(
             email="demo@remotejobhub.com",
             username="demo",
-            hashed_password=get_password_hash("demo123"),
+            hashed_password=get_password_hash("Demo1234"),
             full_name="Demo User",
-            is_verified=True
+            is_verified=True,
         )
         session.add(demo_user)
-        
+
         await session.commit()
-        
-        print("✅ Database seeded successfully!")
-        print("   Companies:", len(SAMPLE_COMPANIES))
-        print("   Jobs:", len(SAMPLE_JOBS))
-        print("   Demo user: demo@remotejobhub.com / demo123")
+
+        print("Database seeded successfully!")
+        print(f"   Companies: {len(SAMPLE_COMPANIES)}")
+        print(f"   Jobs: {len(SAMPLE_JOBS)}")
+        print("   Demo user: demo@remotejobhub.com / Demo1234")
 
 
 if __name__ == "__main__":

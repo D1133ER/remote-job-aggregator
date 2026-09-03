@@ -23,7 +23,7 @@ echo "✅ Using: $COMPOSE"
 
 # Environment setup
 if [ ! -f .env ]; then
-    echo "📝 Creating .env file..."
+    echo "Creating .env file..."
     cat > .env << EOF
 # Backend
 DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/remotejobs
@@ -32,13 +32,22 @@ ELASTICSEARCH_URL=http://localhost:9200
 DEBUG=true
 SECRET_KEY=$(openssl rand -hex 32)
 
+# Security
+ALLOWED_ORIGINS=http://localhost:3000
+
 # OpenAI (optional for AI enrichment)
 OPENAI_API_KEY=your-openai-api-key
+
+# Scraping
+GREENHOUSE_COMPANY_TOKENS=stripe,gitlab,airbnb,discord,figma,vercel,coinbase,reddit,instacart,datadog,duolingo,airtable,chime,upwork
+LEVER_COMPANY_TOKENS=linkedin,spotify
+# Set to a comma-separated list of Workable account slugs to enable (e.g. miro,strava)
+WORKABLE_COMPANY_TOKENS=
 
 # Frontend
 NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
 EOF
-    echo "✅ Created .env file. Please update with your API keys."
+    echo "Created .env file. Please update with your API keys."
     exit 0
 fi
 

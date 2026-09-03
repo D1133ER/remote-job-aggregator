@@ -22,7 +22,7 @@ class CompanyResponse(BaseModel):
     average_response_time: Optional[str]
     total_jobs_posted: int
     total_jobs_remote: int
-    
+
     class Config:
         from_attributes = True
 
@@ -42,101 +42,90 @@ async def get_companies(
     remote_policy: Optional[str] = None,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
-    """Get list of companies"""
     query = select(Company)
-    
+
     if industry:
         query = query.where(Company.industry == industry)
-    
+
     if remote_policy:
         query = query.where(Company.remote_policy == remote_policy)
-    
-    # Pagination
+
     offset = (page - 1) * limit
     query = query.offset(offset).limit(limit)
-    
+
     result = await db.execute(query)
     companies = result.scalars().all()
-    
+
     return companies
 
 
 @router.get("/{company_name}", response_model=CompanyResponse)
 async def get_company(
     company_name: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
-    """Get company details by name"""
     result = await db.execute(
         select(Company).where(Company.name == company_name)
     )
     company = result.scalar_one_or_none()
-    
+
     if not company:
-        raise HTTPException(
-            status_code=404,
-            detail="Company not found"
-        )
-    
+        raise HTTPException(status_code=404, detail="Company not found")
+
     return company
 
 
 @router.get("/{company_name}/stats", response_model=CompanyStats)
 async def get_company_stats(
     company_name: str,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
-    """Get company statistics"""
-    # Get all jobs for this company
-    result = await db.execute(
-        select(Job).where(
-            Job.company_name == company_name,
-            Job.is_active == True
-        )
+    """Get company statistics using SQL aggregation"""
+    base_filter = (Job.company_name == company_name, Job.is_active == True)
+
+    # Total and remote counts in one query
+    counts_result = await db.execute(
+        select(
+            func.count(Job.id).label("total_jobs"),
+            func.count(Job.id).filter(Job.remote_type == "full_remote").label("remote_jobs"),
+            func.avg(Job.salary_min).label("avg_salary_min"),
+            func.avg(Job.salary_max).label("avg_salary_max"),
+        ).where(*base_filter)
     )
-    jobs = result.scalars().all()
-    
-    if not jobs:
-        raise HTTPException(
-            status_code=404,
-            detail="No jobs found for this company"
-        )
-    
-    # Calculate stats
-    total_jobs = len(jobs)
-    remote_jobs = sum(1 for job in jobs if job.remote_type == "full_remote")
-    
-    # Salary stats
-    salaries_min = [job.salary_min for job in jobs if job.salary_min]
-    salaries_max = [job.salary_max for job in jobs if job.salary_max]
-    
-    avg_salary_min = sum(salaries_min) / len(salaries_min) if salaries_min else None
-    avg_salary_max = sum(salaries_max) / len(salaries_max) if salaries_max else None
-    
-    # Top skills
+    row = counts_result.one()
+
+    if row.total_jobs == 0:
+        raise HTTPException(status_code=404, detail="No jobs found for this company")
+
+    # Get skills from the JSON column — fetch only the skills column
+    skills_result = await db.execute(
+        select(Job.skills).where(*base_filter).where(Job.skills.isnot(None))
+    )
     all_skills = []
-    for job in jobs:
-        if job.skills:
-            all_skills.extend(job.skills)
-    
-    skill_counts = {}
+    for (skills_list,) in skills_result:
+        if isinstance(skills_list, list):
+            all_skills.extend(skills_list)
+
+    skill_counts: dict = {}
     for skill in all_skills:
         skill_counts[skill] = skill_counts.get(skill, 0) + 1
-    
-    top_skills = sorted(skill_counts.keys(), key=lambda x: skill_counts[x], reverse=True)[:10]
-    
+    top_skills = sorted(skill_counts, key=lambda x: skill_counts[x], reverse=True)[:10]
+
     # Categories
-    categories = list(set(job.category for job in jobs if job.category))
-    
+    cat_result = await db.execute(
+        select(Job.category).where(*base_filter).where(Job.category.isnot(None)).distinct()
+    )
+    categories = [cat for (cat,) in cat_result]
+
     return CompanyStats(
-        total_jobs=total_jobs,
-        remote_jobs=remote_jobs,
-        average_salary_min=avg_salary_min,
-        average_salary_max=avg_salary_max,
+        total_jobs=row.total_jobs,
+        remote_jobs=row.remote_jobs,
+        average_salary_min=round(row.avg_salary_min, 2) if row.avg_salary_min else None,
+        average_salary_max=round(row.avg_salary_max, 2) if row.avg_salary_max else None,
         top_skills=top_skills,
-        categories=categories
+        categories=categories,
     )
 
 
@@ -146,22 +135,20 @@ async def get_company_jobs(
     remote_only: bool = True,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
-    """Get jobs for a specific company"""
     query = select(Job).where(
         Job.company_name == company_name,
-        Job.is_active == True
+        Job.is_active == True,
     )
-    
+
     if remote_only:
         query = query.where(Job.remote_type == "full_remote")
-    
-    # Pagination
+
     offset = (page - 1) * limit
     query = query.offset(offset).limit(limit)
-    
+
     result = await db.execute(query)
     jobs = result.scalars().all()
-    
+
     return {"jobs": jobs, "company": company_name}

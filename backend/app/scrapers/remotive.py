@@ -1,67 +1,79 @@
 from typing import List, Dict, Any
 from .base import BaseScraper
 
+
 class RemotiveScraper(BaseScraper):
     """Scraper for Remotive API"""
-    
+
     def __init__(self):
         super().__init__()
         self.source_name = "remotive"
         self.api_url = "https://remotive.com/api/remote-jobs"
-    
+
     async def fetch_jobs(self) -> List[Dict[str, Any]]:
-        """Fetch jobs from Remotive API"""
         response = await self.fetch_url(self.api_url)
         jobs_data = response.json()
-        
+
         parsed_jobs = []
         for job in jobs_data.get("jobs", []):
             parsed_job = self.parse_job(job)
             if parsed_job:
                 parsed_jobs.append(parsed_job)
-        
+
         return parsed_jobs
-    
+
     def parse_job(self, raw_job: Dict) -> Dict[str, Any]:
-        """Parse Remotive job data"""
+        description = raw_job.get("description", "") or ""
         return {
             "title": raw_job.get("title"),
             "company_name": raw_job.get("company_name"),
             "company_logo_url": raw_job.get("company_logo_url"),
-            "description": raw_job.get("description"),
+            "description": description,
             "location": raw_job.get("candidate_required_location", "Remote"),
             "remote_type": "full_remote",
             "source_url": raw_job.get("url"),
             "source_id": str(raw_job.get("id")),
             "posted_at": raw_job.get("publication_date"),
-            "salary_min": self.parse_salary(raw_job.get("salary"), "min"),
-            "salary_max": self.parse_salary(raw_job.get("salary"), "max"),
-            "skills": self.extract_skills_from_description(raw_job.get("description", "")),
+            "salary_min": self._parse_salary(raw_job.get("salary"), "min"),
+            "salary_max": self._parse_salary(raw_job.get("salary"), "max"),
+            "skills": self.extract_skills(description),
             "tags": raw_job.get("tags", []),
             "category": raw_job.get("category"),
         }
-    
-    def parse_salary(self, salary_str: str, type: str) -> float:
-        """Parse salary string to float"""
+
+    def _parse_salary(self, salary_str: str, sal_type: str):
         if not salary_str:
             return None
-        
-        # Simple parsing, you can make this more sophisticated
         try:
-            # Extract numbers from string like "50k - 80k"
-            numbers = [int(s.replace('k', '000').replace('K', '000')) 
-                      for s in salary_str.split('-') if any(c.isdigit() for c in s)]
-            
-            if type == "min" and numbers:
-                return float(numbers[0])
-            elif type == "max" and len(numbers) > 1:
-                return float(numbers[1])
-        except:
+            import re
+            numbers = re.findall(r'[\d,]+[kK]?', salary_str)
+            parsed = []
+            for n in numbers:
+                n_clean = n.replace(",", "")
+                if n_clean.lower().endswith("k"):
+                    parsed.append(int(float(n_clean[:-1]) * 1000))
+                else:
+                    parsed.append(int(n_clean))
+            if sal_type == "min" and parsed:
+                return float(parsed[0])
+            elif sal_type == "max" and len(parsed) > 1:
+                return float(parsed[1])
+        except (ValueError, TypeError):
             pass
-        
         return None
-    
-    def extract_skills_from_description(self, description: str) -> List[str]:
-        """Extract skills from description"""
-        # Similar to Greenhouse implementation
-        return []
+
+    def extract_skills(self, description: str) -> List[str]:
+        skills = []
+        tech_keywords = [
+            "python", "java", "javascript", "typescript", "react", "angular",
+            "vue", "node", "django", "flask", "fastapi", "aws", "azure",
+            "gcp", "docker", "kubernetes", "sql", "postgresql", "mongodb",
+            "redis", "elasticsearch", "graphql", "rest", "microservices",
+            "ruby", "rails", "go", "golang", "rust", "php", "swift", "kotlin",
+            "terraform", "ansible", "jenkins", "git", "linux", "css", "html",
+        ]
+        desc_lower = description.lower()
+        for kw in tech_keywords:
+            if kw in desc_lower:
+                skills.append(kw)
+        return skills

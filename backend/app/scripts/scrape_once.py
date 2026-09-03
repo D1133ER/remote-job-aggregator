@@ -12,7 +12,7 @@ from app.services.ai_enrichment import AIEnrichmentService
 from app.core.database import AsyncSessionLocal, engine, Base
 from app.models.job import Job
 from app.core.config import settings
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 async def run_scrape():
@@ -52,7 +52,7 @@ async def run_scrape():
                 for key, value in job_data.items():
                     if value is not None and hasattr(existing, key):
                         setattr(existing, key, value)
-                existing.updated_at = datetime.utcnow()
+                existing.updated_at = datetime.now(timezone.utc)
                 updated_count += 1
             else:
                 new_job = Job(**job_data)

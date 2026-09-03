@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from 'date-fns'
 import { BriefcaseIcon, MapPinIcon, ClockIcon, BookmarkIcon, CheckBadgeIcon } from '@heroicons/react/24/outline'
-import { API_BASE_URL } from '@/utils/api'
+import { hideJob as hideJobApi } from '@/utils/api'
 
 interface JobCardProps {
   onHide?: () => void
@@ -29,12 +29,13 @@ export default function JobCard({ job, onHide }: JobCardProps) {
       return
     }
 
-    const response = await fetch(
-      `${API_BASE_URL}/jobs/${job.id}/hide`,
-      { method: 'POST', headers: { Authorization: `Bearer ${token}` } }
-    )
-
-    if (response.ok || response.status === 409) onHide()
+    try {
+      await hideJobApi(job.id)
+      onHide()
+    } catch (err: any) {
+      // 409 means already hidden — still remove from the list
+      if (err.response?.status === 409) onHide()
+    }
   }
 
   return (

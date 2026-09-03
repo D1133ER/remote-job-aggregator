@@ -12,7 +12,7 @@ import {
   ExclamationTriangleIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline'
-import { API_BASE_URL } from '@/utils/api'
+import { getAlerts, createAlert, updateAlert, deleteAlert as deleteAlertApi } from '@/utils/api'
 
 interface Alert {
   id: string
@@ -53,11 +53,7 @@ export default function Alerts() {
       return
     }
     try {
-      const response = await fetch(`${API_BASE_URL}/alerts/`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      if (!response.ok) throw new Error('Failed to load alerts')
-      setAlerts(await response.json())
+      setAlerts(await getAlerts())
     } catch (err) {
       setError('Failed to load alerts')
     } finally {
@@ -70,28 +66,20 @@ export default function Alerts() {
     const token = localStorage.getItem('token')
     if (!token) return
     try {
-      const response = await fetch(`${API_BASE_URL}/alerts/`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newAlert.name,
-          keywords: newAlert.keywords,
-          category: newAlert.category || null,
-          remote_type: newAlert.remote_type || null,
-          location: newAlert.location || null,
-          salary_min: newAlert.salary_min ? parseInt(newAlert.salary_min) : null,
-          frequency: newAlert.frequency
-        })
+      await createAlert({
+        name: newAlert.name,
+        keywords: newAlert.keywords,
+        category: newAlert.category || null,
+        remote_type: newAlert.remote_type || null,
+        location: newAlert.location || null,
+        salary_min: newAlert.salary_min ? parseInt(newAlert.salary_min) : null,
+        frequency: newAlert.frequency
       })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to create alert')
-      }
       setShowForm(false)
       setNewAlert({ name: '', keywords: '', category: '', remote_type: 'full_remote', location: '', salary_min: '', frequency: 'daily' })
       loadAlerts()
     } catch (err: any) {
-      setError(err.message || 'Failed to create alert')
+      setError(err.response?.data?.detail || err.message || 'Failed to create alert')
     }
   }
 
@@ -99,11 +87,7 @@ export default function Alerts() {
     const token = localStorage.getItem('token')
     if (!token) return
     try {
-      await fetch(`${API_BASE_URL}/alerts/${alert.id}`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !alert.is_active })
-      })
+      await updateAlert(alert.id, { is_active: !alert.is_active })
       loadAlerts()
     } catch (err) {
       console.error('Failed to toggle alert')
@@ -115,9 +99,7 @@ export default function Alerts() {
     if (!token) return
     setAlerts(alerts.filter(a => a.id !== alertId))
     try {
-      await fetch(`${API_BASE_URL}/alerts/${alertId}`, {
-        method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
-      })
+      await deleteAlertApi(alertId)
     } catch (err) {
       console.error('Failed to delete alert')
     }

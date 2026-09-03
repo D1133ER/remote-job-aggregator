@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Query
+import logging
+from fastapi import APIRouter, Query, HTTPException
 from typing import List, Optional
 from app.services.elasticsearch_service import ElasticsearchService
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -21,31 +24,36 @@ async def search_jobs(
     category: Optional[str] = None,
     remote_type: Optional[str] = None,
     page: int = Query(1, ge=1),
-    size: int = Query(20, ge=1, le=100)
+    size: int = Query(20, ge=1, le=100),
 ):
     """Search jobs using Elasticsearch"""
-    es_service = _get_es_service()
-    filters = {}
-    if category:
-        filters["category"] = category
-    if remote_type:
-        filters["remote_type"] = remote_type
-    
-    results = es_service.search_jobs(
-        query=q,
-        filters=filters,
-        page=page,
-        size=size
-    )
-    
-    return results
+    try:
+        es_service = _get_es_service()
+        filters = {}
+        if category:
+            filters["category"] = category
+        if remote_type:
+            filters["remote_type"] = remote_type
+
+        results = es_service.search_jobs(query=q, filters=filters, page=page, size=size)
+        return results
+    except Exception as e:
+        logger.error("Elasticsearch search failed: %s", e)
+        raise HTTPException(
+            status_code=503,
+            detail="Search service is temporarily unavailable. Please try again.",
+        )
 
 
 @router.get("/suggest")
 async def suggest_jobs(
-    q: str = Query(..., min_length=1)
+    q: str = Query(..., min_length=1),
 ):
     """Get autocomplete suggestions"""
-    es_service = _get_es_service()
-    suggestions = es_service.suggest(q)
-    return {"suggestions": suggestions}
+    try:
+        es_service = _get_es_service()
+        suggestions = es_service.suggest(q)
+        return {"suggestions": suggestions}
+    except Exception as e:
+        logger.error("Elasticsearch suggest failed: %s", e)
+        return {"suggestions": []}

@@ -24,7 +24,7 @@ class SavedJobResponse(BaseModel):
     notes: Optional[str]
     created_at: datetime
     job: Optional[dict] = None
-    
+
     class Config:
         from_attributes = True
 
@@ -33,8 +33,7 @@ class SavedJobUpdate(BaseModel):
     notes: Optional[str] = None
 
 
-def serialize_job(job):
-    """Convert a Job ORM object to a serializable dict"""
+def serialize_job(job: Job) -> Optional[dict]:
     if not job:
         return None
     return {
@@ -57,80 +56,73 @@ def serialize_job(job):
 @router.get("/", response_model=List[SavedJobResponse])
 async def get_saved_jobs(
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
-    """Get all saved jobs for current user"""
+    """Get all saved jobs for current user (single query with JOIN)"""
     result = await db.execute(
-        select(SavedJob).where(SavedJob.user_id == current_user.id)
+        select(SavedJob, Job)
+        .join(Job, SavedJob.job_id == Job.id, isouter=True)
+        .where(SavedJob.user_id == current_user.id)
     )
-    saved_jobs = result.scalars().all()
-    
-    # Fetch job details for each saved job
-    response = []
-    for saved_job in saved_jobs:
-        job_result = await db.execute(
-            select(Job).where(Job.id == saved_job.job_id)
-        )
-        job = job_result.scalar_one_or_none()
-        
-        response.append(SavedJobResponse(
+    rows = result.all()
+
+    return [
+        SavedJobResponse(
             id=saved_job.id,
             job_id=saved_job.job_id,
             notes=saved_job.notes,
             created_at=saved_job.created_at,
-            job=serialize_job(job)
-        ))
-    
-    return response
+            job=serialize_job(job),
+        )
+        for saved_job, job in rows
+    ]
 
 
 @router.post("/", response_model=SavedJobResponse)
 async def save_job(
     saved_job_data: SavedJobCreate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Save a job"""
-    # Check if job exists
     job_result = await db.execute(
         select(Job).where(Job.id == saved_job_data.job_id)
     )
     job = job_result.scalar_one_or_none()
-    
+
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Job not found"
+            detail="Job not found",
         )
-    
-    # Check if already saved
+
     existing = await db.execute(
         select(SavedJob).where(
             SavedJob.user_id == current_user.id,
-            SavedJob.job_id == saved_job_data.job_id
+            SavedJob.job_id == saved_job_data.job_id,
         )
     )
     if existing.scalar_one_or_none():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Job already saved"
+            detail="Job already saved",
         )
-    
+
     saved_job = SavedJob(
         user_id=current_user.id,
         job_id=saved_job_data.job_id,
-        notes=saved_job_data.notes
+        notes=saved_job_data.notes,
     )
     db.add(saved_job)
     await db.commit()
     await db.refresh(saved_job)
-    
+
     return SavedJobResponse(
         id=saved_job.id,
         job_id=saved_job.job_id,
         notes=saved_job.notes,
         created_at=saved_job.created_at,
-        job=serialize_job(job)
+        job=serialize_job(job),
     )
 
 
@@ -139,41 +131,39 @@ async def update_saved_job(
     saved_job_id: str,
     update_data: SavedJobUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Update notes on a saved job"""
     result = await db.execute(
-        select(SavedJob).where(
+        select(SavedJob, Job)
+        .join(Job, SavedJob.job_id == Job.id, isouter=True)
+        .where(
             SavedJob.id == saved_job_id,
-            SavedJob.user_id == current_user.id
+            SavedJob.user_id == current_user.id,
         )
     )
-    saved_job = result.scalar_one_or_none()
-    
-    if not saved_job:
+    row = result.first()
+
+    if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Saved job not found"
+            detail="Saved job not found",
         )
-    
+
+    saved_job, job = row
+
     if update_data.notes is not None:
         saved_job.notes = update_data.notes
-    
+
     await db.commit()
     await db.refresh(saved_job)
-    
-    # Fetch job details
-    job_result = await db.execute(
-        select(Job).where(Job.id == saved_job.job_id)
-    )
-    job = job_result.scalar_one_or_none()
-    
+
     return SavedJobResponse(
         id=saved_job.id,
         job_id=saved_job.job_id,
         notes=saved_job.notes,
         created_at=saved_job.created_at,
-        job=job
+        job=serialize_job(job),
     )
 
 
@@ -181,24 +171,24 @@ async def update_saved_job(
 async def unsave_job(
     saved_job_id: str,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """Remove a job from saved jobs"""
     result = await db.execute(
         select(SavedJob).where(
             SavedJob.id == saved_job_id,
-            SavedJob.user_id == current_user.id
+            SavedJob.user_id == current_user.id,
         )
     )
     saved_job = result.scalar_one_or_none()
-    
+
     if not saved_job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Saved job not found"
+            detail="Saved job not found",
         )
-    
+
     await db.delete(saved_job)
     await db.commit()
-    
+
     return {"status": "success", "message": "Job removed from saved"}

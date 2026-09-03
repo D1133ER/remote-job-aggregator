@@ -104,10 +104,19 @@ DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/remotejobs
 REDIS_URL=redis://localhost:6379/0
 ELASTICSEARCH_URL=http://localhost:9200
 DEBUG=true
-SECRET_KEY=change-me-to-a-random-string
+SECRET_KEY=change-me-to-a-random-string-at-least-32-chars
+
+# Security
+ALLOWED_ORIGINS=http://localhost:3000
 
 # OpenAI (optional, enables AI salary/summary enrichment)
 OPENAI_API_KEY=your-openai-api-key
+
+# Scraping
+GREENHOUSE_COMPANY_TOKENS=stripe,gitlab,airbnb,discord,figma,vercel,coinbase,reddit,instacart,datadog,duolingo,airtable,chime,upwork
+LEVER_COMPANY_TOKENS=linkedin,spotify
+# Set to a comma-separated list of Workable account slugs to enable (e.g. miro,strava)
+WORKABLE_COMPANY_TOKENS=
 
 # Frontend
 NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
@@ -123,7 +132,7 @@ source .venv/bin/activate
 python app/scripts/seed_data.py
 ```
 
-> Seed login — `demo@remotejobhub.com` / `demo123`
+> Seed login — `demo@remotejobhub.com` / `Demo1234`
 
 ### 5. Run everything
 
@@ -168,13 +177,20 @@ chmod +x deploy.sh
 
 ## Data Sources
 
-Current scrapers (`backend/app/scrapers/`):
+Current scrapers (`backend/app/scrapers/`) — all pull **real, legitimate** remote jobs:
 
-1. **Greenhouse** — public ATS job board API
-2. **Lever** — public ATS job board API
-3. **Workable** — public ATS job board API
-4. **Remotive** — remote job board API
-5. **We Work Remotely** — RSS feed parsing
+| Source | Type | Status | What It Provides |
+|--------|------|--------|------------------|
+| **Greenhouse** | ATS API | ✅ Active | Remote jobs from 14 verified boards (GitLab, Coinbase, Reddit, Instacart, Stripe, etc.) |
+| **Arbeitnow** | Job board API | ✅ Active | Large remote-friendly listings |
+| **RemoteOK** | Remote job board API | ✅ Active | Remote jobs with salary data |
+| **Jobicy** | Remote job board API | ✅ Active | Remote jobs with structured salary data |
+| **We Work Remotely** | RSS feed | ✅ Active | Remote programming job listings |
+| **Remotive** | Remote job board API | ✅ Active | Curated remote jobs |
+| **Lever** | ATS API | ⚠️ Configured (LinkedIn/Spotify) | Picks up jobs only when a board lists remote roles |
+| **Workable** | ATS API | ⚠️ Disabled by default | Enable by setting `WORKABLE_COMPANY_TOKENS` |
+
+> **Note on seed data**: `seed_data.py` inserts 9 synthetic jobs for development/demo only. Live scrapes (via Celery or `scrape_once.py`) overwrite/merge real listings and are the intended production data source.
 
 ### Adding a new source
 
@@ -221,8 +237,12 @@ All routes are prefixed with `/api/v1`.
 | `REDIS_URL` | Redis connection string | `redis://localhost:6379/0` |
 | `ELASTICSEARCH_URL` | Elasticsearch endpoint | `http://localhost:9200` |
 | `DEBUG` | Enable debug/docs | `true` |
-| `SECRET_KEY` | JWT signing secret | — |
+| `SECRET_KEY` | JWT signing secret (min 32 chars, auto-generated if empty) | — |
+| `ALLOWED_ORIGINS` | Comma-separated CORS origins | `http://localhost:3000` |
 | `OPENAI_API_KEY` | OpenAI key for AI enrichment (optional) | — |
+| `GREENHOUSE_COMPANY_TOKENS` | Comma-separated Greenhouse board tokens to scrape | 14 verified remote-first companies |
+| `LEVER_COMPANY_TOKENS` | Comma-separated Lever company slugs to scrape | `linkedin,spotify` |
+| `WORKABLE_COMPANY_TOKENS` | Comma-separated Workable account slugs to scrape | empty (disabled) |
 | `NEXT_PUBLIC_API_URL` | Frontend → backend base URL | `http://localhost:8000/api/v1` |
 
 ---

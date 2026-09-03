@@ -6,7 +6,7 @@ import JobCard from '@/components/JobCard'
 import SearchBar from '@/components/SearchBar'
 import FilterSidebar from '@/components/FilterSidebar'
 import { ChevronLeftIcon, ChevronRightIcon, BriefcaseIcon } from '@heroicons/react/24/outline'
-import { API_BASE_URL } from '@/utils/api'
+import { fetchJobs, getCompanies } from '@/utils/api'
 
 interface Job {
   id: string
@@ -47,24 +47,20 @@ export default function Home() {
   const loadJobs = async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (filters.query) params.append('q', filters.query)
-      if (filters.category) params.append('category', filters.category)
-      if (filters.remoteType) params.append('remote_type', filters.remoteType)
-      if (filters.experienceLevel) params.append('experience_level', filters.experienceLevel)
-      if (filters.salaryMin) params.append('salary_min', filters.salaryMin.toString())
-      if (filters.skills.length > 0) {
-        filters.skills.forEach(skill => params.append('skills', skill))
+      const filtersForApi = {
+        ...filters,
+        sort,
+        query: filters.query || undefined,
+        category: filters.category || undefined,
+        remoteType: filters.remoteType || undefined,
+        experienceLevel: filters.experienceLevel || undefined,
+        salaryMin: filters.salaryMin || undefined,
       }
-      params.append('page', page.toString())
-      if (sort !== 'recent') params.append('sort', sort)
 
-      const [jobsRes, companiesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/jobs/?${params}`),
-        fetch(`${API_BASE_URL}/companies/`),
+      const [jobsData, companiesData] = await Promise.all([
+        fetchJobs(filtersForApi, page),
+        getCompanies(),
       ])
-      const jobsData = await jobsRes.json()
-      const companiesData = await companiesRes.json()
       setJobs(jobsData.jobs || [])
       setTotalJobs(jobsData.total || 0)
       setCompaniesCount(Array.isArray(companiesData) ? companiesData.length : 0)

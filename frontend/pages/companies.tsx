@@ -3,7 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import Header from '@/components/Header'
 import { BuildingOfficeIcon, MagnifyingGlassIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
-import { API_BASE_URL } from '@/utils/api'
+import { getCompanies } from '@/utils/api'
 
 interface Company {
   id: string
@@ -27,8 +27,7 @@ export default function Companies() {
 
   const loadCompanies = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/companies/`)
-      const data = await response.json()
+      const data = await getCompanies()
       setCompanies(data)
     } catch (error) {
       console.error('Failed to load companies:', error)

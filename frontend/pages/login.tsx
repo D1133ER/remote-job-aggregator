@@ -3,7 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { BriefcaseIcon, EnvelopeIcon, LockClosedIcon, SparklesIcon } from '@heroicons/react/24/outline'
-import { API_BASE_URL } from '@/utils/api'
+import { loginUser } from '@/utils/api'
 
 export default function Login() {
   const router = useRouter()
@@ -18,26 +18,11 @@ export default function Login() {
     setError('')
 
     try {
-      const formData = new URLSearchParams()
-      formData.append('username', email)
-      formData.append('password', password)
-
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formData
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Login failed')
-      }
-
-      const data = await response.json()
+      const data = await loginUser(email, password)
       localStorage.setItem('token', data.access_token)
       router.push('/')
     } catch (err: any) {
-      setError(err.message || 'Login failed')
+      setError(err.response?.data?.detail || err.message || 'Login failed')
     } finally {
       setLoading(false)
     }
@@ -154,7 +139,7 @@ export default function Login() {
           </form>
 
           <div className="mt-8 rounded-2xl border border-brand-100 bg-brand-50 p-4 text-sm text-brand-700">
-            <span className="font-semibold">Demo account:</span> demo@remotejobhub.com / demo123
+            <span className="font-semibold">Demo account:</span> demo@remotejobhub.com / Demo1234
           </div>
         </div>
       </div>

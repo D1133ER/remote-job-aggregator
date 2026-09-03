@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import Header from '@/components/Header'
 import JobCard from '@/components/JobCard'
 import { ArrowLeftIcon, GlobeAltIcon, ChartBarIcon, BriefcaseIcon, SparklesIcon } from '@heroicons/react/24/outline'
-import { API_BASE_URL } from '@/utils/api'
+import { getCompany, getCompanyStats, getCompanyJobs } from '@/utils/api'
 
 interface Company {
   id: string
@@ -58,20 +58,19 @@ export default function CompanyDetail() {
     const decodedName = decodeURIComponent(name as string)
     try {
       const [companyRes, statsRes, jobsRes] = await Promise.allSettled([
-        fetch(`${API_BASE_URL}/companies/${decodedName}`),
-        fetch(`${API_BASE_URL}/companies/${decodedName}/stats`),
-        fetch(`${API_BASE_URL}/companies/${decodedName}/jobs`),
+        getCompany(decodedName),
+        getCompanyStats(decodedName),
+        getCompanyJobs(decodedName),
       ])
 
-      if (companyRes.status === 'fulfilled' && companyRes.value.ok) {
-        setCompany(await companyRes.value.json())
+      if (companyRes.status === 'fulfilled') {
+        setCompany(companyRes.value)
       }
-      if (statsRes.status === 'fulfilled' && statsRes.value.ok) {
-        setStats(await statsRes.value.json())
+      if (statsRes.status === 'fulfilled') {
+        setStats(statsRes.value)
       }
-      if (jobsRes.status === 'fulfilled' && jobsRes.value.ok) {
-        const data = await jobsRes.value.json()
-        setJobs(data.jobs || [])
+      if (jobsRes.status === 'fulfilled') {
+        setJobs(jobsRes.value.jobs || jobsRes.value || [])
       }
     } catch (error) {
       console.error('Failed to load company:', error)

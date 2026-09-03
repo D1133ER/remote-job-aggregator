@@ -3,7 +3,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { BriefcaseIcon, UserIcon, EnvelopeIcon, LockClosedIcon, ChatBubbleOvalLeftIcon, CheckBadgeIcon } from '@heroicons/react/24/outline'
-import { API_BASE_URL } from '@/utils/api'
+import { registerUser } from '@/utils/api'
 
 export default function Register() {
   const router = useRouter()
@@ -33,25 +33,15 @@ export default function Register() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          username: formData.username,
-          full_name: formData.full_name,
-          password: formData.password
-        })
+      await registerUser({
+        email: formData.email,
+        username: formData.username,
+        full_name: formData.full_name,
+        password: formData.password,
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Registration failed')
-      }
-
       router.push('/login')
     } catch (err: any) {
-      setError(err.message || 'Registration failed')
+      setError(err.response?.data?.detail || err.message || 'Registration failed')
     } finally {
       setLoading(false)
     }
