@@ -2,6 +2,8 @@
 
 A full-stack remote job aggregator that filters, deduplicates, and enriches job postings from multiple ATS and job-board sources. Built to surface only **truly remote** roles (no hybrid/on-site), with salary transparency, instant search, saved jobs, and customizable job alerts.
 
+> 📖 **Documentation:** See [`docs/WORKFLOW.md`](docs/WORKFLOW.md) for the full system architecture, data-ingestion pipeline, and end-to-end flow.
+
 ---
 
 ## Features
