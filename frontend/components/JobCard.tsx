@@ -1,9 +1,11 @@
 import { formatDistanceToNow } from 'date-fns'
-import { BriefcaseIcon, MapPinIcon, ClockIcon, BookmarkIcon, CheckBadgeIcon } from '@heroicons/react/24/outline'
+import Link from 'next/link'
+import { BriefcaseIcon, MapPinIcon, ClockIcon, BookmarkIcon, CheckBadgeIcon, ArrowUpRightIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline'
 import { hideJob as hideJobApi } from '@/utils/api'
 
 interface JobCardProps {
   onHide?: () => void
+  onApply?: (applyUrl: string) => void
   job: {
     id: string
     title: string
@@ -16,10 +18,12 @@ interface JobCardProps {
     skills: string[]
     posted_at: string
     category: string
+    source_url?: string
+    apply_url?: string
   }
 }
 
-export default function JobCard({ job, onHide }: JobCardProps) {
+export default function JobCard({ job, onHide, onApply }: JobCardProps) {
   const hideJob = async () => {
     if (!onHide) return
 
@@ -35,6 +39,18 @@ export default function JobCard({ job, onHide }: JobCardProps) {
     } catch (err: any) {
       // 409 means already hidden — still remove from the list
       if (err.response?.status === 409) onHide()
+    }
+  }
+
+  const openApplication = () => {
+    // Prefer a dedicated apply URL; fall back to the source posting.
+    const target = job.apply_url || job.source_url
+    if (!target) return
+
+    if (onApply) {
+      onApply(target)
+    } else {
+      window.open(target, '_blank', 'noopener,noreferrer')
     }
   }
 
@@ -57,10 +73,14 @@ export default function JobCard({ job, onHide }: JobCardProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="font-display text-lg font-bold text-gray-900 transition-colors group-hover:text-brand-600">
-                {job.title}
-              </h3>
-              <p className="mt-0.5 text-sm font-medium text-gray-500">{job.company_name}</p>
+              <Link href={`/jobs/${job.id}`}>
+                <h3 className="font-display text-lg font-bold text-gray-900 transition-colors group-hover:text-brand-600">
+                  {job.title}
+                </h3>
+              </Link>
+              <Link href={`/jobs/${job.id}`}>
+                <p className="mt-0.5 text-sm font-medium text-gray-500 transition-colors hover:text-brand-600">{job.company_name}</p>
+              </Link>
             </div>
 
             <div className="flex shrink-0 flex-col items-end gap-1">
@@ -115,16 +135,31 @@ export default function JobCard({ job, onHide }: JobCardProps) {
             </div>
           )}
 
-          {onHide && (
-            <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-3">
-              <button
-                type="button"
-                onClick={hideJob}
-                className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
-              >
-                <BookmarkIcon className="h-4 w-4" />
-                Hide job
-              </button>
+          {(job.apply_url || job.source_url || onHide) && (
+            <div className="mt-4 flex items-center justify-between gap-3 border-t border-gray-100 pt-3">
+              <div className="flex items-center gap-2">
+                {(job.apply_url || job.source_url) && (
+                  <button
+                    type="button"
+                    onClick={openApplication}
+                    className="btn-primary inline-flex items-center gap-1.5 !px-3.5 !py-2 text-sm font-semibold"
+                  >
+                    <ArrowUpRightIcon className="h-4 w-4" />
+                    Apply
+                    <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 opacity-70" />
+                  </button>
+                )}
+                {onHide && (
+                  <button
+                    type="button"
+                    onClick={hideJob}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                  >
+                    <BookmarkIcon className="h-4 w-4" />
+                    Hide
+                  </button>
+                )}
+              </div>
               <span className="rounded-md bg-gray-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
                 {job.category}
               </span>

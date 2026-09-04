@@ -32,6 +32,7 @@ class BaseScraper(ABC):
             "location": job.get("location", "Remote"),
             "remote_type": job.get("remote_type", "full_remote"),
             "source_url": job.get("source_url"),
+            "apply_url": job.get("apply_url") or job.get("source_url"),
             "source_name": self.source_name,
             "posted_at": job.get("posted_at", datetime.now(timezone.utc)),
             "skills": job.get("skills", []),

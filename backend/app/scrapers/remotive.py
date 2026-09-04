@@ -32,6 +32,7 @@ class RemotiveScraper(BaseScraper):
             "location": raw_job.get("candidate_required_location", "Remote"),
             "remote_type": "full_remote",
             "source_url": raw_job.get("url"),
+            "apply_url": raw_job.get("url"),
             "source_id": str(raw_job.get("id")),
             "posted_at": raw_job.get("publication_date"),
             "salary_min": self._parse_salary(raw_job.get("salary"), "min"),

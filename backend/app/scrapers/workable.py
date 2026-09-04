@@ -73,6 +73,7 @@ class WorkableScraper(BaseScraper):
             "location": location,
             "remote_type": "full_remote",
             "source_url": f"https://{company}.workable.com/jobs/{raw_job.get('shortcode', '')}",
+            "apply_url": f"https://{company}.workable.com/jobs/{raw_job.get('shortcode', '')}",
             "source_id": str(raw_job.get("shortcode", "")),
             "posted_at": posted_at,
             "skills": self.extract_skills(description),

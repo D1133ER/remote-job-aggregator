@@ -45,6 +45,7 @@ class WeWorkRemotelyScraper(BaseScraper):
                 "location": "Remote",
                 "remote_type": "full_remote",
                 "source_url": entry.get("link", ""),
+                "apply_url": entry.get("link", ""),
                 "source_id": entry.get("link", ""),
                 "posted_at": entry.get("published"),
                 "skills": skills,

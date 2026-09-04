@@ -160,6 +160,10 @@ export default function Home() {
                       key={job.id}
                       job={job}
                       onHide={() => setJobs((current) => current.filter((i) => i.id !== job.id))}
+                      onApply={(applyUrl) => {
+                        const w = window.open(applyUrl, '_blank', 'noopener,noreferrer')
+                        if (w) w.opener = null
+                      }}
                     />
                   ))}
                 </div>

@@ -172,6 +172,7 @@ async def seed_database():
         for i, job_data in enumerate(SAMPLE_JOBS):
             job_data = dict(job_data)
             job_data["source_url"] = f"https://example.com/jobs/{i}"
+            job_data["apply_url"] = job_data["source_url"]
             job_data["source_name"] = random.choice(["greenhouse", "remotive", "lever", "weworkremotely"])
             job_data["source_id"] = f"sample-{i}"
             job_data["posted_at"] = now - timedelta(days=i % 10)

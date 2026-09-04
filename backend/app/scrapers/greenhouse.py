@@ -57,6 +57,7 @@ class GreenhouseScraper(BaseScraper):
             "location": location,
             "remote_type": "full_remote",
             "source_url": raw_job.get("absolute_url"),
+            "apply_url": raw_job.get("absolute_url"),
             "source_id": str(raw_job.get("id")),
             "posted_at": posted_at,
             "skills": self.extract_skills(description),

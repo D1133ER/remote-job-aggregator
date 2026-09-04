@@ -58,6 +58,7 @@ class RemoteOKScraper(BaseScraper):
             "location": raw_job.get("location") or "Remote",
             "remote_type": "full_remote",
             "source_url": f"https://remoteok.com/remote-jobs/{raw_job.get('id')}",
+            "apply_url": raw_job.get("apply_url") or f"https://remoteok.com/remote-jobs/{raw_job.get('id')}",
             "source_id": str(raw_job.get("id")),
             "posted_at": posted_at,
             "salary_min": salary_min,

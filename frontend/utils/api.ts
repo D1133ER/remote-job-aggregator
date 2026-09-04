@@ -76,6 +76,12 @@ export const searchJobs = async (query: string, filters: Record<string, any> = {
   return data
 }
 
+// Job detail
+export const getJob = async (jobId: string) => {
+  const { data } = await api.get(`/jobs/${jobId}`)
+  return data
+}
+
 export const getSuggestions = async (prefix: string) => {
   const { data } = await api.get(`/search/suggest?q=${encodeURIComponent(prefix)}`)
   return data.suggestions ?? []

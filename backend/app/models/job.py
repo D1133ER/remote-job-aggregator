@@ -31,6 +31,7 @@ class Job(BaseModel):
 
     # Metadata
     source_url = Column(String(1000), unique=True)
+    apply_url = Column(String(1000))
     source_name = Column(String(100))
     source_id = Column(String(200))
     job_type = Column(String(50))

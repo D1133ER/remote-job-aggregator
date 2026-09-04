@@ -76,6 +76,7 @@ class JobicyScraper(BaseScraper):
             "location": raw_job.get("jobGeo", "Remote"),
             "remote_type": "full_remote",
             "source_url": raw_job.get("url", ""),
+            "apply_url": raw_job.get("url", ""),
             "source_id": str(raw_job.get("id", "")),
             "posted_at": posted_at,
             "salary_min": salary_min,

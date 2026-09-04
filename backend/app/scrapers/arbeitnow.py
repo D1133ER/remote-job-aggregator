@@ -64,6 +64,7 @@ class ArbeitnowScraper(BaseScraper):
             "location": raw_job.get("location", "Remote"),
             "remote_type": "full_remote",
             "source_url": raw_job.get("url", ""),
+            "apply_url": raw_job.get("url", ""),
             "source_id": raw_job.get("slug", ""),
             "posted_at": posted_at,
             "salary_min": None,

@@ -58,6 +58,7 @@ class LeverScraper(BaseScraper):
             "location": location,
             "remote_type": "full_remote",
             "source_url": raw_job.get("hostedUrl", ""),
+            "apply_url": raw_job.get("hostedUrl", ""),
             "source_id": str(raw_job.get("id", "")),
             "posted_at": posted_at,
             "skills": self.extract_skills(description),
