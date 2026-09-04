@@ -10,6 +10,7 @@ from .remoteok import RemoteOKScraper
 from .arbeitnow import ArbeitnowScraper
 from .jobicy import JobicyScraper
 from app.core.config import settings
+from app.core.metrics import inc
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,7 @@ class ScraperManager:
             logger.info("%s: Fetched %d jobs", scraper.source_name, len(jobs))
             return jobs
         except Exception as e:
+            inc("scrape_errors_total", {"source": scraper.source_name})
             logger.error("Error in %s: %s", scraper.source_name, str(e))
             return []
         finally:

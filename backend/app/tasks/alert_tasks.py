@@ -1,5 +1,6 @@
 from celery import Celery
 from app.core.config import settings
+from app.core.metrics import inc
 from app.core.database import AsyncSessionLocal
 from app.models.user import User, JobAlert
 from app.models.job import Job
@@ -102,6 +103,7 @@ async def process_alert(session, alert: JobAlert):
     )
 
     if success:
+        inc("alerts_sent_total", {"type": "scheduled"})
         logger.info(f"Sent alert email to {user.email} for alert {alert.name}")
 
 
@@ -147,6 +149,7 @@ async def _async_send_instant_alert(job_id: str):
                         alert_name=f"Instant: {alert.name}",
                         jobs=job_data,
                     )
+                    inc("alerts_sent_total", {"type": "instant"})
 
 
 def matches_alert(job: Job, alert: JobAlert) -> bool:

@@ -3,7 +3,7 @@ import sys
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 import uvicorn
 
 from app.core.config import settings
@@ -103,7 +103,6 @@ async def root():
 @app.get("/health")
 async def health_check():
     health = {"status": "healthy", "checks": {}}
-
     try:
         from sqlalchemy import text
 
@@ -137,6 +136,14 @@ async def health_check():
 
     status_code = 200 if health["status"] == "healthy" else 503
     return JSONResponse(content=health, status_code=status_code)
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+async def metrics_endpoint():
+    """Expose in-process counters/gauges in Prometheus text format."""
+    from app.core.metrics import render
+
+    return render()
 
 
 @app.on_event("shutdown")

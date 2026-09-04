@@ -260,14 +260,15 @@ docker compose down -v                   # wipe volumes
 ```
 backend/
   alembic/            # database migrations (001→005)
+  tests/              # unittest-based scraper/metrics/migration tests
   app/
     api/routes/       # FastAPI route handlers
-    core/             # config, database, security
+    core/             # config, database, security, metrics registry
     models/           # SQLAlchemy models (Job, Company, User, ...)
     scrapers/         # 8 data-source scrapers + manager
     scripts/          # seed_data, scrape_once
     services/         # auth, AI enrichment, Elasticsearch
-    tasks/            # Celery scraping + alert tasks
+    tasks/            # Celery scraping + alert + retention tasks
 frontend/
   components/         # UI components (Header, JobCard, ...)
   pages/              # Next.js pages (incl. /jobs/[id] apply page)
