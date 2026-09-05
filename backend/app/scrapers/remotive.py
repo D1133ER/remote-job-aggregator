@@ -1,4 +1,5 @@
 from typing import List, Dict, Any
+from datetime import datetime, timezone
 from .base import BaseScraper
 
 
@@ -24,6 +25,19 @@ class RemotiveScraper(BaseScraper):
 
     def parse_job(self, raw_job: Dict) -> Dict[str, Any]:
         description = raw_job.get("description", "") or ""
+
+        # Remotive's publication_date is an ISO-8601 string — coerce to a
+        # timezone-aware datetime so asyncpg can persist it.
+        posted_at = None
+        publication_date = raw_job.get("publication_date")
+        if publication_date:
+            try:
+                posted_at = datetime.fromisoformat(str(publication_date).replace("Z", "+00:00"))
+                if posted_at.tzinfo is None:
+                    posted_at = posted_at.replace(tzinfo=timezone.utc)
+            except (ValueError, TypeError):
+                pass
+
         return {
             "title": raw_job.get("title"),
             "company_name": raw_job.get("company_name"),
@@ -34,7 +48,7 @@ class RemotiveScraper(BaseScraper):
             "source_url": raw_job.get("url"),
             "apply_url": raw_job.get("url"),
             "source_id": str(raw_job.get("id")),
-            "posted_at": raw_job.get("publication_date"),
+            "posted_at": posted_at,
             "salary_min": self._parse_salary(raw_job.get("salary"), "min"),
             "salary_max": self._parse_salary(raw_job.get("salary"), "max"),
             "skills": self.extract_skills(description),

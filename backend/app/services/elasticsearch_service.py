@@ -36,8 +36,8 @@ class ElasticsearchService:
                     "salary_max": {"type": "float"},
                     "posted_at": {"type": "date"},
                     "is_active": {"type": "boolean"},
-                    "source_url": {"type": "keyword", "index": false},
-                    "apply_url": {"type": "keyword", "index": false},
+                    "source_url": {"type": "keyword", "index": False},
+                    "apply_url": {"type": "keyword", "index": False},
                     "source_name": {"type": "keyword"}
                 }
             },

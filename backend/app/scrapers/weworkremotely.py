@@ -3,6 +3,8 @@ from .base import BaseScraper
 import feedparser
 from bs4 import BeautifulSoup
 import re
+import time
+from datetime import datetime, timezone
 
 
 class WeWorkRemotelyScraper(BaseScraper):
@@ -38,6 +40,8 @@ class WeWorkRemotelyScraper(BaseScraper):
                 entry.get("title", "") + " " + clean_description
             )
 
+            posted_at = self._parse_published(entry.get("published"))
+
             jobs.append({
                 "title": entry.get("title", "").strip(),
                 "company_name": company_name,
@@ -47,12 +51,34 @@ class WeWorkRemotelyScraper(BaseScraper):
                 "source_url": entry.get("link", ""),
                 "apply_url": entry.get("link", ""),
                 "source_id": entry.get("link", ""),
-                "posted_at": entry.get("published"),
+                "posted_at": posted_at,
                 "skills": skills,
                 "tags": ["remote"],
             })
 
         return jobs
+
+    def _parse_published(self, value):
+        """feedparser returns struct_time or a string — normalize to a tz-aware datetime."""
+        if not value:
+            return None
+        # struct_time
+        if isinstance(value, time.struct_time):
+            try:
+                return datetime(*value[:6], tzinfo=timezone.utc)
+            except (ValueError, TypeError, OverflowError):
+                return None
+        # ISO-8601 string
+        if isinstance(value, str):
+            try:
+                dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                return dt
+            except (ValueError, TypeError):
+                return None
+        # Already a datetime
+        return value
 
     def parse_job(self, raw_data: Dict) -> Dict[str, Any]:
         return raw_data

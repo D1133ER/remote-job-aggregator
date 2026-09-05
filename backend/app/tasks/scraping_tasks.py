@@ -13,10 +13,68 @@ from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
+
+def _coerce_datetime(value):
+    """Coerce posted_at/created_at to a timezone-aware datetime or None."""
+    if value is None or isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            return None
+    if isinstance(value, (int, float)):
+        try:
+            return datetime.fromtimestamp(value, tz=timezone.utc)
+        except (ValueError, TypeError, OverflowError, OSError):
+            return None
+    return None
+
+
+def _coerce_datetimes(job_data: Dict) -> Dict:
+    """Normalize datetime fields across scrapers to the types asyncpg expects."""
+    for field in ("posted_at", "created_at", "expires_at"):
+        if field in job_data:
+            job_data[field] = _coerce_datetime(job_data.get(field))
+    return job_data
+
+
+# Max lengths from the Job model — truncate so no single source value can crash
+# the whole ingest (e.g. Greenhouse location strings that list 10+ cities).
+_JOB_COLUMN_LENGTHS = {
+    "title": 500,
+    "company_name": 200,
+    "company_logo_url": 500,
+    "company_website": 500,
+    "location": 200,
+    "remote_type": 50,
+    "timezone_requirements": 200,
+    "salary_currency": 10,
+    "salary_display": 200,
+    "source_url": 1000,
+    "apply_url": 1000,
+    "source_name": 100,
+    "source_id": 200,
+    "job_type": 50,
+    "experience_level": 50,
+    "category": 100,
+}
+
+
+def _coerce_string_lengths(job_data: Dict) -> Dict:
+    """Truncate string fields that would overflow their VARCHAR column."""
+    for field, max_len in _JOB_COLUMN_LENGTHS.items():
+        value = job_data.get(field)
+        if isinstance(value, str) and len(value) > max_len:
+            job_data[field] = value[:max_len]
+    return job_data
+
 celery_app = Celery(
     "remote_job_tasks",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
+    include=["app.tasks.scraping_tasks", "app.tasks.alert_tasks"],
 )
 
 celery_app.conf.update(
@@ -80,6 +138,8 @@ async def _async_scrape_all_jobs():
         async with AsyncSessionLocal() as session:
             for job_data in jobs:
                 job_data = await enrichment.enrich_job(job_data)
+                job_data = _coerce_datetimes(job_data)
+                job_data = _coerce_string_lengths(job_data)
 
                 result = await session.execute(
                     select(Job).where(Job.source_url == job_data.get("source_url"))
